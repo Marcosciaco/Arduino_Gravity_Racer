@@ -3,7 +3,8 @@
 #include <SD.h>
 #include <SPI.h>
 #include "dht.h"
-
+static const int RXPing = 10;
+static const int TXPing = 13;
 static const int RXPin = 0;
 static const int TXPin = 1;
 //=================================GPS-Speed=================================
@@ -27,8 +28,8 @@ int hours;
 int minutes;
 int seconds;
 
-SoftwareSerial ss(RXPin, TXPin);
-File file;
+SoftwareSerial ss(RXPing, TXPing);
+File myFile;
 TinyGPSPlus gps;
 
 static const int pinCS = 53;
@@ -39,14 +40,12 @@ static const int sensorPinL = A2;
 static const int togglePinSP = 8;
 static const int togglePinSD = 11;
 
+int i = 0;
 void setup() {
-  ss.begin(GPSBaud);
   Serial.begin(9600);
-  pinMode(pinCS, OUTPUT);
-  pinMode(togglePinSP, INPUT);
-  pinMode(togglePinSD, INPUT);
+  ss.begin(GPSBaud);
+  pinMode(53, OUTPUT);
   if (SD.begin()) {
-    file = SD.open("test.txt", FILE_WRITE);
   }
 }
 
@@ -54,8 +53,11 @@ void loop() {
   DHTR.read11(A0);
   DHTL.read11(A1);
   getGPS();
-  sendtoSD();
   sendScreen();
+  if(i <= 100){
+       sendtoSD();
+  }
+  i++;
 }
 
 static void smartDelay(unsigned long ms)
@@ -85,6 +87,7 @@ void getGPS() {
     minutes = gps.time.minute();
     seconds = gps.time.second();
   }
+  
   smartDelay(1000);
 }
 
@@ -143,6 +146,16 @@ void sendScreen() {
   Serial.write(0xff);
   Serial.write(0xff);
 
+  String s1 = ".";
+  String s = (hours+2) + s1 + minutes + s1 + seconds;
+  Serial.print("time.txt=");
+  Serial.print("\"");
+  Serial.print(s);
+  Serial.print("\"");
+  Serial.write(0xff);
+  Serial.write(0xff);
+  Serial.write(0xff);
+
   Serial.print("spd.val=");
   Serial.print(gps_speed);
   Serial.write(0xff);
@@ -151,34 +164,34 @@ void sendScreen() {
 }
 
 void sendtoSD() {
-  if (digitalRead(togglePinSD) == HIGH) {
-    if (file) {
-      file.print(days);
-      file.print(".");
-      file.print(months);
-      file.print(".");
-      file.print(years);
-      file.print(".");
-      file.print(hours);
-      file.print(".");
-      file.print(minutes);
-      file.print(".");
-      file.print(seconds);
-      file.print(",");
-      file.print(tmpr);
-      file.print(",");
-      file.print(tmpl);
-      file.print(",");
-      file.print(hml);
-      file.print(",");
-      file.print(hmr);
-      file.print(",");
-      file.print(gps_speed);
-      file.print(",");
+    myFile = SD.open("test.txt",FILE_WRITE);
+    if (myFile) {
+      myFile.print(days);
+      myFile.print(".");
+      myFile.print(months);
+      myFile.print(".");
+      myFile.print(years);
+      myFile.print(",");
+      myFile.print(hours+2);
+      myFile.print(".");
+      myFile.print(minutes);
+      myFile.print(".");
+      myFile.print(seconds);
+      myFile.print(";");
+      myFile.print(tmpr);
+      myFile.print(";");
+      myFile.print(tmpl);
+      myFile.print(";");
+      myFile.print(hml);
+      myFile.print(";");
+      myFile.print(hmr);
+      myFile.print(",");
+      myFile.print(gps_speed);
+      myFile.print(Lat);
+      myFile.print(",");
+      myFile.print(Long);
+      myFile.print(",");
+      myFile.println(";");
+      myFile.close();
     }
-  } else {
-    if (digitalRead(togglePinSD) == LOW) {
-      file.close();
-    }
-  }
 }
