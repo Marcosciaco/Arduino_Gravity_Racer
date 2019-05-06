@@ -4,19 +4,21 @@
 #include <SPI.h>
 #include "dht.h"
 
-static const int RXPing = 10;
-static const int TXPing = 13;
+//===================================Screen=================================
 static const int RXPin = 0;
 static const int TXPin = 1;
 //=================================GPS-Speed=================================
+TinyGPSPlus gps;
 double Lat = 0;
 double Long = 0;
 int num_sat = 0;
 double gps_speed = 0;
+static const uint32_t GPSBaud = 9600;
 //=================================TMP=======================================
 dht DHTR;
 dht DHTL;
-
+static const int sensorPinR = A1;
+static const int sensorPinL = A2;
 float hml = 0;
 float hmr = 0;
 float tmpl = 0;
@@ -28,20 +30,15 @@ int years;
 int hours;
 int minutes;
 int seconds;
-
-SoftwareSerial ss(RXPing, TXPing);
+//==================================SD=======================================
 File myFile;
-TinyGPSPlus gps;
-
+static const int RXPing = 10;
+static const int TXPing = 13;
 static const int pinCS = 53;
-static const uint32_t GPSBaud = 9600;
-static const int potPin = A0;
-static const int sensorPinR = A1;
-static const int sensorPinL = A2;
-static const int togglePinSP = 8;
-static const int togglePinSD = 11;
+SoftwareSerial ss(RXPing, TXPing);
 
-int i = 0;
+
+//=================================Setup=====================================
 void setup() {
   Serial.begin(9600);
   ss.begin(GPSBaud);
@@ -50,19 +47,21 @@ void setup() {
   }
 }
 
+//=================================Loop======================================
 void loop() {
+  //setup Sensors
   DHTR.read11(A0);
   DHTL.read11(A1);
+  //get the GPS Data
   getGPS();
+  //send all the collected Data to the Screen
   sendScreen();
-  if(i <= 100){
-       sendtoSD();
-  }
-  i++;
+  //send all the collected Data to the SD
+  sendtoSD();
 }
 
-static void smartDelay(unsigned long ms)
-{
+//makes a smart delay which only activates if needed
+static void smartDelay(unsigned long ms){
   unsigned long start = millis();
   do
   {
@@ -71,27 +70,33 @@ static void smartDelay(unsigned long ms)
   } while (millis() - start < ms);
 }
 
+//gets the Date and Time, the location and Speed from the GPS
 void getGPS() {
+  //number of satellites
   num_sat = gps.satellites.value();
   if (gps.location.isValid() == 1) {
+    //get Location and Speed
     Lat = gps.location.lat();
     Long = gps.location.lng();
     gps_speed = gps.speed.kmph();
   }
   if (gps.date.isValid()) {
+    //get Date
     days = gps.date.day();
     months = gps.date.month();
     years = gps.date.year();
   }
   if (gps.time.isValid()) {
+    //get Time
     hours = gps.time.hour();
     minutes = gps.time.minute();
     seconds = gps.time.second();
   }
-  
+  //Delay to avoid unnecessary waiting
   smartDelay(1000);
 }
 
+//Send all the collected Data to the Sreen
 void sendScreen() {
   //========================================TMP-to-Screen========================================
   tmpl = DHTL.temperature;
@@ -163,7 +168,7 @@ void sendScreen() {
   Serial.write(0xff);
   Serial.write(0xff);
 }
-
+//send all the collected Data to tthe SD
 void sendtoSD() {
     myFile = SD.open("test.txt",FILE_WRITE);
     if (myFile) {
