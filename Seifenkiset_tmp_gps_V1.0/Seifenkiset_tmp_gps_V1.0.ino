@@ -3,6 +3,7 @@
 #include <SD.h>
 #include <SPI.h>
 #include "dht.h"
+
 static const int RXPing = 10;
 static const int TXPing = 13;
 static const int RXPin = 0;
@@ -187,6 +188,7 @@ void sendtoSD() {
       myFile.print(hmr);
       myFile.print(",");
       myFile.print(gps_speed);
+      myFile.print(",");
       myFile.print(Lat);
       myFile.print(",");
       myFile.print(Long);
